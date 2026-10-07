@@ -20,9 +20,10 @@ export function loadConfig(options: { backendDir?: string; env?: NodeJS.ProcessE
     if (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > max) throw new Error(`Некорректная настройка ${name}.`);
     return Number(value);
   };
-  if (!env.PUBLIC_WEB_ORIGIN || !env.ALLOWED_ORIGINS) throw new Error('Сначала выполните npm run configure или заполните backend/.env.');
-  const publicWebOrigin = normalizeOrigin(env.PUBLIC_WEB_ORIGIN);
-  const allowedOrigins = [...new Set(env.ALLOWED_ORIGINS.split(',').map(value => normalizeOrigin(value.trim())))];
+  const configuredOrigin = env.PUBLIC_WEB_ORIGIN || env.RENDER_EXTERNAL_URL;
+  if (!configuredOrigin) throw new Error('Сначала задайте PUBLIC_WEB_ORIGIN или разверните сервис с публичным адресом.');
+  const publicWebOrigin = normalizeOrigin(configuredOrigin);
+  const allowedOrigins = [...new Set((env.ALLOWED_ORIGINS || publicWebOrigin).split(',').map(value => normalizeOrigin(value.trim())))];
   const trustedProxyAddresses = validateTrustedProxyAddresses(env.TRUST_PROXY?.trim() ? env.TRUST_PROXY.split(',') : []);
   const rateLimits = Object.fromEntries(Object.entries(defaultRateLimits).map(([kind, defaults]) => [kind, {
     limit: integer(`RATE_LIMIT_${kind.toUpperCase()}_MAX`, defaults.limit),

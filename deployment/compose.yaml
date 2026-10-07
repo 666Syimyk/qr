@@ -7,7 +7,8 @@ services:
       context: ..
       dockerfile: deployment/Dockerfile
       args:
-        PUBLIC_WEB_ORIGIN: https://${DOMAIN:?Set DOMAIN in deployment/.env}
+        EXPO_PUBLIC_API_URL: https://${DOMAIN:?Set DOMAIN in deployment/.env}/api/v1
+        EXPO_BASE_URL: /
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0

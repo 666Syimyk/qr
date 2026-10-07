@@ -14,9 +14,10 @@ COPY frontend/ ./frontend/
 COPY backend/ ./backend/
 COPY database/ ./database/
 
-ARG PUBLIC_WEB_ORIGIN
-ENV EXPO_PUBLIC_API_URL=${PUBLIC_WEB_ORIGIN}/api/v1
-RUN node -e "const u=new URL(process.env.EXPO_PUBLIC_API_URL); if(u.protocol!=='https:' || u.username || u.password || u.search || u.hash || u.pathname!=='/api/v1') throw new Error('PUBLIC_WEB_ORIGIN must be an HTTPS origin without a path');"
+ARG EXPO_PUBLIC_API_URL=
+ARG EXPO_BASE_URL=/
+ENV EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL} EXPO_BASE_URL=${EXPO_BASE_URL}
+RUN if [ -n "$EXPO_PUBLIC_API_URL" ]; then node -e "const u=new URL(process.env.EXPO_PUBLIC_API_URL); if(u.protocol!=='https:' || u.username || u.password || u.search || u.hash || u.pathname!=='/api/v1') throw new Error('EXPO_PUBLIC_API_URL must be an HTTPS /api/v1 URL');"; fi
 RUN npm --prefix frontend run typecheck && npm --prefix backend run typecheck && npm --prefix database run typecheck
 RUN npm --prefix frontend run build:web
 
