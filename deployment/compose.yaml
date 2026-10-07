@@ -1,0 +1,83 @@
+name: emergency-qr
+
+services:
+  app:
+    image: emergency-qr-app:local
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+      args:
+        PUBLIC_WEB_ORIGIN: https://${DOMAIN:?Set DOMAIN in deployment/.env}
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3001"
+      PUBLIC_WEB_ORIGIN: https://${DOMAIN:?Set DOMAIN in deployment/.env}
+      ALLOWED_ORIGINS: https://${DOMAIN:?Set DOMAIN in deployment/.env}
+      DATABASE_PATH: /app/data/emergency-qr.sqlite
+      WEB_DIST_PATH: /app/frontend/dist
+      TRUST_PROXY: 172.30.42.2
+    volumes:
+      - card_data:/app/data
+    networks:
+      - backend
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
+    # No published app port: external traffic must pass through Caddy.
+
+  proxy:
+    image: caddy:2-alpine
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in deployment/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      edge: {}
+      backend:
+        ipv4_address: 172.30.42.2
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  card_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  edge: {}
+  backend:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.42.0/24

@@ -1,0 +1,16 @@
+{
+	admin off
+	# HTTP error entries can contain the full private URI too.
+	log default {
+		exclude http.log.access http.log.error
+	}
+}
+
+{$DOMAIN} {
+	# Do not enable access logs or debug/trace request logging.
+	reverse_proxy app:3001 {
+		# Caddy is the single internet-facing proxy; discard client-supplied chains.
+		header_up X-Forwarded-For {remote_host}
+		header_up -Forwarded
+	}
+}

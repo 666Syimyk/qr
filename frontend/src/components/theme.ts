@@ -1,0 +1,20 @@
+export const colors = {
+  background: "#F5F7FA",
+  ink: "#102139",
+  muted: "#647389",
+  primary: "#E51D36",
+  primaryDark: "#C8142D",
+  soft: "#FFF0F2",
+  // Compatibility aliases for shared components; all accents are now red.
+  teal: "#E51D36",
+  tealDark: "#C8142D",
+  tealLight: "#FFF0F2",
+  white: "#FFFFFF",
+  line: "#E1E7EE",
+  amber: "#805A17",
+  amberLight: "#FFF7E8",
+  red: "#BF2338",
+  redLight: "#FFF0F2",
+  success: "#13834B",
+  successLight: "#ECF8F0",
+};

@@ -1,0 +1,21 @@
+{
+  "name": "emergency-qr",
+  "version": "1.0.0",
+  "private": true,
+  "engines": { "node": "24.x" },
+  "scripts": {
+    "setup": "node scripts/run.mjs setup",
+    "configure": "node scripts/configure.mjs",
+    "build:web": "npm --prefix frontend run build:web",
+    "start": "npm --prefix backend run start",
+    "mobile": "npm --prefix frontend run start",
+    "test": "node scripts/run.mjs test",
+    "check": "node scripts/run.mjs check",
+    "test:all": "node scripts/run.mjs test-all",
+    "test:integration": "npm --prefix backend run test:integration",
+    "test:e2e": "node scripts/e2e.mjs",
+    "test:browser": "node scripts/browser.mjs",
+    "test:configure": "node --test tests/configure.test.mjs",
+    "lint": "npm --prefix frontend run lint"
+  }
+}

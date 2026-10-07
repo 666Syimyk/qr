@@ -1,0 +1,22 @@
+# This Dockerfile-specific file filters the repository-root build context.
+**/node_modules
+**/.git
+**/.env
+**/.env.*
+**/.expo
+**/.checks
+**/.claude
+**/.vscode
+**/dist
+**/test-results
+**/playwright-report
+**/*.sqlite
+**/*.sqlite-wal
+**/*.sqlite-shm
+**/*.db
+**/*.zip
+**/*.zip.sha256
+.integration
+data
+backups
+deployment/.env

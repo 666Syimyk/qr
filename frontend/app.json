@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "Emergency QR",
+    "slug": "emergency-qr",
+    "version": "1.0.0",
+    "scheme": "emergency-qr",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F5F8FB",
+    "ios": { "supportsTablet": true },
+    "web": { "bundler": "metro", "output": "single", "name": "Emergency QR" },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": { "typedRoutes": true }
+  }
+}
