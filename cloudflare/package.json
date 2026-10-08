@@ -1,0 +1,12 @@
+{
+  "name": "emergency-qr-cloudflare",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create emergency-qr-cards",
+    "db:migrate:remote": "wrangler d1 migrations apply emergency-qr-cards --remote"
+  },
+  "devDependencies": {
+    "wrangler": "^4.45.0"
+  }
+}
