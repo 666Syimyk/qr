@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { Redirect, router, useFocusEffect } from "expo-router";
 import {
   AppState,
+  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -9,6 +10,8 @@ import {
   TextInput,
   View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { Page } from "../components/Page";
 import {
   Button,
@@ -50,6 +53,9 @@ export default function Profile() {
   const [showKey, setShowKey] = useState(false);
   const [confirmation, setConfirmation] = useState<Action | null>(null);
   const [busy, setBusy] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoNotice, setPhotoNotice] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -102,6 +108,56 @@ export default function Profile() {
       setBusy(false);
     }
   }
+  async function updatePhoto(remove = false) {
+    if (!token || sending.current) return;
+    const requestToken = token;
+    sending.current = true;
+    setPhotoBusy(true);
+    setPhotoError(null);
+    setPhotoNotice(null);
+    try {
+      let photoDataUrl: string | null = null;
+      if (!remove) {
+        const selection = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 1,
+        });
+        if (selection.canceled) return;
+        const asset = selection.assets[0];
+        if (!asset?.uri) throw new Error("Не удалось открыть выбранное фото.");
+        const context = ImageManipulator.manipulate(asset.uri);
+        context.resize({ width: 640, height: 640 });
+        const rendered = await context.renderAsync();
+        const result = await rendered.saveAsync({
+          format: SaveFormat.JPEG,
+          compress: 0.68,
+          base64: true,
+        });
+        if (!result.base64) throw new Error("Не удалось обработать фото.");
+        photoDataUrl = `data:image/jpeg;base64,${result.base64}`;
+        if (photoDataUrl.length > 350_000) {
+          throw new Error("Фото слишком большое. Выберите другое изображение.");
+        }
+      }
+      await api.updateProfilePhoto(requestToken, photoDataUrl);
+      if (latestToken.current !== requestToken) return;
+      await state.refresh();
+      setPhotoNotice(remove ? "Фото профиля удалено." : "Фото профиля обновлено.");
+    } catch (e) {
+      if (latestToken.current === requestToken) {
+        setPhotoError(
+          e instanceof Error
+            ? e.message
+            : "Не удалось изменить фото. Попробуйте ещё раз.",
+        );
+      }
+    } finally {
+      sending.current = false;
+      setPhotoBusy(false);
+    }
+  }
   function leave() {
     if (busy || leaving) return;
     setShowKey(false);
@@ -135,9 +191,18 @@ export default function Profile() {
         ) : card ? (
           <View style={s.identity}>
             <View style={s.avatar}>
-              <Text style={s.initials}>
-                {card.displayName.trim().slice(0, 1).toLocaleUpperCase("ru-RU")}
-              </Text>
+              {card.photoDataUrl ? (
+                <Image
+                  source={{ uri: card.photoDataUrl }}
+                  style={s.avatarPhoto}
+                  resizeMode="cover"
+                  accessibilityLabel={`Фото профиля ${card.displayName}`}
+                />
+              ) : (
+                <Text style={s.initials}>
+                  {card.displayName.trim().slice(0, 1).toLocaleUpperCase("ru-RU")}
+                </Text>
+              )}
             </View>
             <View style={{ flex: 1, gap: 5 }}>
               <Text style={s.name}>{card.displayName}</Text>
@@ -150,6 +215,39 @@ export default function Profile() {
             </View>
           </View>
         ) : null}
+        {card && (
+          <View style={s.photoSection}>
+            <View style={{ gap: 4 }}>
+              <Text style={s.sectionTitle}>Фото профиля</Text>
+              <Text style={s.body}>
+                Фото будет видно всем, кто откроет карточку по QR.
+              </Text>
+            </View>
+            <View style={s.photoActions}>
+              <Button
+                label={card.photoDataUrl ? "Изменить фото" : "Добавить фото"}
+                icon="camera"
+                busy={photoBusy}
+                disabled={busy}
+                onPress={() => void updatePhoto()}
+                style={{ flex: 1 }}
+              />
+              {card.photoDataUrl && (
+                <Button
+                  label="Удалить"
+                  icon="trash"
+                  kind="ghost"
+                  busy={photoBusy}
+                  disabled={busy}
+                  onPress={() => void updatePhoto(true)}
+                  style={{ paddingHorizontal: 12 }}
+                />
+              )}
+            </View>
+            {photoNotice && <Notice tone="success">{photoNotice}</Notice>}
+            {photoError && <Notice tone="error">{photoError}</Notice>}
+          </View>
+        )}
         <View style={s.menu}>
           <MenuRow
             label="Мой QR-код"
@@ -326,7 +424,9 @@ const s = StyleSheet.create({
     backgroundColor: c.tealLight,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
+  avatarPhoto: { width: "100%", height: "100%" },
   initials: { fontSize: 29, color: c.teal, fontWeight: "700" },
   name: { fontSize: 23, lineHeight: 30, fontWeight: "700", color: c.ink },
   meta: { fontSize: 12, lineHeight: 18, color: c.muted },
@@ -340,6 +440,13 @@ const s = StyleSheet.create({
   menuLabel: { flex: 1, fontSize: 15, lineHeight: 21, color: c.ink },
   divider: { borderBottomWidth: 1, borderColor: "#E2E7ED" },
   body: { fontSize: 14, lineHeight: 22, color: c.muted },
+  photoSection: {
+    gap: 12,
+    padding: 16,
+    borderRadius: 15,
+    backgroundColor: "#F1F4F8",
+  },
+  photoActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   security: { gap: 15 },
   sectionHeading: { flexDirection: "row", alignItems: "center", gap: 9 },
   sectionTitle: { fontSize: 17, fontWeight: "700", color: c.ink },

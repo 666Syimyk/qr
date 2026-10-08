@@ -18,12 +18,14 @@ export interface OwnerCard extends CardInput {
   consentAt: string;
   createdAt: string;
   updatedAt: string;
+  photoDataUrl: string | null;
 }
 export interface PublicCard {
   displayName: string;
   emergencyContact: EmergencyContact;
   importantInfo: string | null;
   updatedAt: string;
+  photoDataUrl: string | null;
 }
 export interface OwnerResult {
   card: OwnerCard;

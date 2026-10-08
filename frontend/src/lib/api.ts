@@ -47,6 +47,7 @@ export interface ApiClient {
   setStatus(token: string, status: CardStatus): Promise<OwnerResult>;
   rotateQr(token: string): Promise<OwnerResult>;
   deleteCard(token: string): Promise<void>;
+  updateProfilePhoto(token: string, photoDataUrl: string | null): Promise<OwnerResult>;
   getPublicCard(publicToken: string): Promise<PublicCard>;
 }
 
@@ -156,6 +157,7 @@ function isPublicCard(value: unknown): value is PublicCard {
   return (
     typeof value.displayName === "string" &&
     typeof value.updatedAt === "string" &&
+    (value.photoDataUrl === null || typeof value.photoDataUrl === "string") &&
     (value.importantInfo === null || typeof value.importantInfo === "string") &&
     typeof contact.name === "string" &&
     typeof contact.relationship === "string" &&
@@ -326,6 +328,8 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       request<OwnerResult>("/me/card/rotate-qr", "POST", {}, token),
     deleteCard: (token) =>
       request<void>("/me/card", "DELETE", undefined, token),
+    updateProfilePhoto: (token, photoDataUrl) =>
+      request<OwnerResult>("/me/card/photo", "PUT", { photoDataUrl }, token),
     getPublicCard: (token) =>
       request<PublicCard>(`/public/cards/${encodeURIComponent(token)}`, "GET"),
   };

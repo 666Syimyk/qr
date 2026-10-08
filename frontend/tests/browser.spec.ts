@@ -60,6 +60,7 @@ function sampleCard(): OwnerCard {
     consentAt: "2026-10-01T05:00:00.000Z",
     createdAt: "2026-10-01T05:00:00.000Z",
     updatedAt: "2026-10-01T05:00:00.000Z",
+    photoDataUrl: null,
   };
 }
 
@@ -181,6 +182,7 @@ async function interceptApi(page: Page): Promise<ApiFixture> {
           ? state.card.importantInfo
           : null,
         updatedAt: state.card.updatedAt,
+        photoDataUrl: state.card.photoDataUrl,
       };
       return json(200, card);
     }

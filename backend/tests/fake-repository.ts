@@ -26,6 +26,12 @@ export class FakeRepository implements CardRepository {
     Object.assign(card, { status, updatedAt: now });
     return structuredClone(card);
   }
+  setProfilePhoto(hash: string, photoDataUrl: string | null, now: string) {
+    const card = this.records.get(hash);
+    if (!card) return null;
+    Object.assign(card, { photoDataUrl, updatedAt: now });
+    return structuredClone(card);
+  }
   rotatePublicToken(hash: string, token: string, now: string) {
     const card = this.records.get(hash);
     if (!card) return null;

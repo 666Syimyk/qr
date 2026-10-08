@@ -20,7 +20,8 @@ function fixture(overrides: Partial<StoredCard> = {}): StoredCard {
     emergencyContact: { name: 'Демо-контакт', relationship: 'Родственник', phone: '+999000000001' },
     importantInfo: 'ДЕМОНСТРАЦИЯ. Вымышленные сведения.',
     publishImportantInfo: false, consentToPublish: true, status: 'active',
-    consentAt: created, createdAt: created, updatedAt: created, ...overrides,
+    consentAt: created, createdAt: created, updatedAt: created,
+    photoDataUrl: null, ...overrides,
   };
 }
 function owner(record: StoredCard): OwnerCard {
@@ -59,6 +60,7 @@ test('direct public read hides the stored note and uses an exact allowlist', () 
   assert.deepEqual(repo.getPublicCard(record.publicToken), {
     displayName: record.displayName, emergencyContact: record.emergencyContact,
     importantInfo: null, updatedAt: created,
+    photoDataUrl: null,
   });
   assert.equal(repo.getOwnerCard(record.ownerTokenHash)?.importantInfo, record.importantInfo);
   repo.replaceCard(record.ownerTokenHash, { ...input(record), publishImportantInfo: true }, later);

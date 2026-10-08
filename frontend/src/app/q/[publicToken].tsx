@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
-import { Linking, StyleSheet, Text, View } from "react-native";
+import { Image, Linking, StyleSheet, Text, View } from "react-native";
 import { Page } from "../../components/Page";
 import {
   Button,
@@ -70,9 +70,18 @@ export default function PublicCardScreen() {
       ) : card ? (
         <Panel style={s.card}>
           <View style={s.avatar}>
-            <Text style={s.initials}>
-              {card.displayName.trim().slice(0, 1).toLocaleUpperCase("ru-RU")}
-            </Text>
+            {card.photoDataUrl ? (
+              <Image
+                source={{ uri: card.photoDataUrl }}
+                style={s.avatarPhoto}
+                resizeMode="cover"
+                accessibilityLabel={`Фото профиля ${card.displayName}`}
+              />
+            ) : (
+              <Text style={s.initials}>
+                {card.displayName.trim().slice(0, 1).toLocaleUpperCase("ru-RU")}
+              </Text>
+            )}
           </View>
           <Text accessibilityRole="header" style={s.name}>
             {card.displayName}
@@ -166,7 +175,9 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignSelf: "center",
     marginTop: 4,
+    overflow: "hidden",
   },
+  avatarPhoto: { width: "100%", height: "100%" },
   initials: { fontSize: 34, fontWeight: "700", color: c.primary },
   name: {
     fontSize: 29,

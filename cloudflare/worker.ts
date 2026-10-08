@@ -20,6 +20,7 @@ interface CardRow {
   consent_at: string;
   created_at: string;
   updated_at: string;
+  photo_data_url: string | null;
 }
 
 interface D1Statement {
@@ -37,7 +38,7 @@ const tokenPattern = /^[A-Za-z0-9_-]{43}$/;
 const rateWindows = new Map<string, { startedAt: number; count: number }>();
 const ownerColumns = `id, public_token, owner_token_hash, display_name, contact_name,
   contact_relationship, contact_phone, important_info, publish_important_info,
-  status, consent_at, created_at, updated_at`;
+  status, consent_at, created_at, updated_at, photo_data_url`;
 
 function json(value: unknown, status = 200, headers: HeadersInit = {}) {
   const result = new Headers(headers);
@@ -67,6 +68,7 @@ function cardFromRow(row: CardRow) {
     consentAt: row.consent_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    photoDataUrl: row.photo_data_url,
   };
 }
 
@@ -165,7 +167,8 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
       return { error: failure(415, "VALIDATION_ERROR", "Используйте Content-Type: application/json.") } as const;
     }
     const text = await request.text();
-    if (text.length > 16 * 1024) return { error: failure(413, "VALIDATION_ERROR", "Тело запроса превышает 16 КБ.") } as const;
+    const bodyLimit = pathname === "/api/v1/me/card/photo" ? 400_000 : 16 * 1024;
+    if (new TextEncoder().encode(text).byteLength > bodyLimit) return { error: failure(413, "VALIDATION_ERROR", `Тело запроса превышает ${bodyLimit / 1024} КБ.`) } as const;
     try { return { value: JSON.parse(text) as unknown } as const; }
     catch { return { error: failure(400, "VALIDATION_ERROR", "Некорректный JSON.") } as const; }
   };
@@ -200,18 +203,19 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
     const token = publicMatch[1];
     if (!tokenPattern.test(token)) return failure(404, "NOT_FOUND", "Карточка или ресурс недоступны.");
     const row = await env.DB.prepare(`SELECT display_name, contact_name, contact_relationship,
-      contact_phone, CASE WHEN publish_important_info = 1 THEN important_info ELSE NULL END AS important_info,
+      contact_phone, photo_data_url, CASE WHEN publish_important_info = 1 THEN important_info ELSE NULL END AS important_info,
       updated_at FROM cards WHERE public_token = ? AND status = 'active'`).bind(token).first<{
         display_name: string; contact_name: string; contact_relationship: string;
-        contact_phone: string; important_info: string | null; updated_at: string;
+        contact_phone: string; important_info: string | null; updated_at: string; photo_data_url: string | null;
       }>();
     if (!row) return failure(404, "NOT_FOUND", "Карточка или ресурс недоступны.");
     return json({ displayName: row.display_name,
       emergencyContact: { name: row.contact_name, relationship: row.contact_relationship, phone: row.contact_phone },
-      importantInfo: row.important_info, updatedAt: row.updated_at }, 200, headers);
+      importantInfo: row.important_info, updatedAt: row.updated_at,
+      photoDataUrl: row.photo_data_url }, 200, headers);
   }
 
-  const ownerRoute = pathname.match(/^\/api\/v1\/me\/card(?:\/(status|rotate-qr))?$/);
+  const ownerRoute = pathname.match(/^\/api\/v1\/me\/card(?:\/(status|rotate-qr|photo))?$/);
   if (ownerRoute && ["GET", "PUT", "PATCH", "POST", "DELETE"].includes(method)) {
     if (isRateLimited(request, "owner", 120, 60_000)) {
       return failure(429, "RATE_LIMITED", "Слишком много запросов. Повторите позже.");
@@ -244,6 +248,18 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
       }
       row = await env.DB.prepare(`UPDATE cards SET status = ?, updated_at = ? WHERE owner_token_hash = ? RETURNING ${ownerColumns}`)
         .bind(status, new Date().toISOString(), ownerHash).first<CardRow>() ?? existing;
+    } else if (method === "PUT" && suffix === "photo") {
+      const body = await parseBody();
+      if ("error" in body && body.error) return body.error;
+      const value = body.value as { photoDataUrl?: unknown } | null;
+      const photoDataUrl = value?.photoDataUrl;
+      if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).length !== 1 ||
+        !(photoDataUrl === null || (typeof photoDataUrl === "string" && photoDataUrl.length <= 350_000 &&
+          /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(photoDataUrl)))) {
+        return failure(400, "VALIDATION_ERROR", "Фото не прошло проверку. Выберите JPEG размером до 350 КБ.");
+      }
+      row = await env.DB.prepare(`UPDATE cards SET photo_data_url = ?, updated_at = ? WHERE owner_token_hash = ? RETURNING ${ownerColumns}`)
+        .bind(photoDataUrl, new Date().toISOString(), ownerHash).first<CardRow>() ?? existing;
     } else if (method === "POST" && suffix === "rotate-qr") {
       const body = await parseBody();
       if ("error" in body && body.error) return body.error;

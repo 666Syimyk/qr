@@ -9,7 +9,7 @@ type Row = Record<string, SQLOutputValue>;
 // Explicitly select only fields permitted in an owner response (never the hash).
 const ownerColumns = `id, public_token, display_name, contact_name,
   contact_relationship, contact_phone, important_info, publish_important_info,
-  consent_to_publish, status, consent_at, created_at, updated_at`;
+  consent_to_publish, status, consent_at, created_at, updated_at, photo_data_url`;
 
 function toOwner(row: Row): OwnerCard {
   return {
@@ -28,6 +28,7 @@ function toOwner(row: Row): OwnerCard {
     consentAt: row.consent_at as string,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
+    photoDataUrl: row.photo_data_url as string | null,
   };
 }
 
@@ -41,6 +42,7 @@ function toPublic(row: Row): PublicCard {
     },
     importantInfo: row.important_info as string | null,
     updatedAt: row.updated_at as string,
+    photoDataUrl: row.photo_data_url as string | null,
   };
 }
 
@@ -63,6 +65,7 @@ function migrate(db: DatabaseSync): void {
     )`);
     const migrations = [
       { version: 1, url: new URL('../migrations/001_init.sql', import.meta.url) },
+      { version: 2, url: new URL('../migrations/002_profile_photo.sql', import.meta.url) },
     ];
     const exists = db.prepare('SELECT version FROM schema_migrations WHERE version = ?');
     const record = db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)');
@@ -104,7 +107,7 @@ function createRepository(db: DatabaseSync): CardRepository {
       consent_to_publish, status, consent_at, created_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ${ownerColumns}`),
     owner: db.prepare(`SELECT ${ownerColumns} FROM cards WHERE owner_token_hash = ?`),
-    public: db.prepare(`SELECT display_name, contact_name, contact_relationship, contact_phone,
+    public: db.prepare(`SELECT display_name, contact_name, contact_relationship, contact_phone, photo_data_url,
       CASE WHEN publish_important_info = 1 THEN important_info ELSE NULL END AS important_info,
       updated_at FROM cards WHERE public_token = ? AND status = 'active'`),
     replace: db.prepare(`UPDATE cards SET display_name = ?, contact_name = ?,
@@ -112,6 +115,8 @@ function createRepository(db: DatabaseSync): CardRepository {
       publish_important_info = ?, consent_to_publish = ?, consent_at = ?, updated_at = ?
       WHERE owner_token_hash = ? RETURNING ${ownerColumns}`),
     status: db.prepare(`UPDATE cards SET status = ?, updated_at = ?
+      WHERE owner_token_hash = ? RETURNING ${ownerColumns}`),
+    photo: db.prepare(`UPDATE cards SET photo_data_url = ?, updated_at = ?
       WHERE owner_token_hash = ? RETURNING ${ownerColumns}`),
     rotate: db.prepare(`UPDATE cards SET public_token = ?, updated_at = ?
       WHERE owner_token_hash = ? RETURNING ${ownerColumns}`),
@@ -158,6 +163,9 @@ function createRepository(db: DatabaseSync): CardRepository {
     },
     setStatus(ownerTokenHash, status, now) {
       return safely(() => readOwner(statements.status, status, now, ownerTokenHash));
+    },
+    setProfilePhoto(ownerTokenHash, photoDataUrl, now) {
+      return safely(() => readOwner(statements.photo, photoDataUrl, now, ownerTokenHash));
     },
     rotatePublicToken(ownerTokenHash, token, now) {
       return safely(() => readOwner(statements.rotate, token, now, ownerTokenHash));

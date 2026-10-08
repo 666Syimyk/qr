@@ -13,6 +13,12 @@ export const cardSchema = z.strictObject({
 });
 export const statusSchema = z.strictObject({ status: z.enum(['active', 'inactive']) });
 export const rotateSchema = z.strictObject({});
+export const profilePhotoSchema = z.strictObject({
+  photoDataUrl: z.string()
+    .max(350_000)
+    .regex(/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/)
+    .nullable(),
+});
 export function parseBody<T>(schema: z.ZodType<T>, body: unknown): T {
   const parsed = schema.safeParse(body);
   if (parsed.success) return parsed.data;

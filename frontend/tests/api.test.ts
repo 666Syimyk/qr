@@ -30,6 +30,7 @@ const owner: OwnerResult = {
     consentAt: "2026-10-01T00:00:00.000Z",
     createdAt: "2026-10-01T00:00:00.000Z",
     updatedAt: "2026-10-01T00:00:00.000Z",
+    photoDataUrl: null,
   },
   publicUrl: `https://demo.example/q/${publicToken}`,
 };
@@ -39,6 +40,7 @@ const publicCard: PublicCard = {
   emergencyContact: input.emergencyContact,
   importantInfo: null,
   updatedAt: "2026-10-01T00:00:00.000Z",
+  photoDataUrl: null,
 };
 function json(value: unknown, status = 200) {
   return new Response(JSON.stringify(value), {

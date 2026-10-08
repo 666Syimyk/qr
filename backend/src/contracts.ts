@@ -18,12 +18,14 @@ export interface OwnerCard extends CardInput {
   consentAt: string;
   createdAt: string;
   updatedAt: string;
+  photoDataUrl: string | null;
 }
 export interface PublicCard {
   displayName: string;
   emergencyContact: EmergencyContact;
   importantInfo: string | null;
   updatedAt: string;
+  photoDataUrl: string | null;
 }
 export interface OwnerResult {
   card: OwnerCard;
@@ -50,6 +52,8 @@ export interface CardRepository {
   replaceCard(ownerTokenHash: string, input: CardInput,
     now: string): OwnerCard | null;
   setStatus(ownerTokenHash: string, status: CardStatus,
+    now: string): OwnerCard | null;
+  setProfilePhoto(ownerTokenHash: string, photoDataUrl: string | null,
     now: string): OwnerCard | null;
   rotatePublicToken(ownerTokenHash: string, token: string,
     now: string): OwnerCard | null;
